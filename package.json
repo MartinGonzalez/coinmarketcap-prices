@@ -2,8 +2,8 @@
   "$schema": "https://www.raycast.com/schemas/extension.json",
   "name": "crypto",
   "title": "Crypto",
-  "description": "Shows cripto prices",
-  "icon": "extension-icon.png",
+  "description": "Shows crypto prices",
+  "icon": "crypto.png",
   "author": "MartinGonzalez",
   "license": "MIT",
   "commands": [
