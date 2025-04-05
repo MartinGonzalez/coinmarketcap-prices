@@ -14,6 +14,7 @@ interface Preferences {
   customTickers: string;
   coinmarketcapApiKey?: string;
   dataSource: "binance" | "coinmarketcap";
+  priceChangeThreshold?: string;
 }
 
 /**
@@ -84,7 +85,10 @@ export default function Command() {
   const [selectedCrypto, setSelectedCrypto] = useState<CryptoPrice | null>(null);
   
   // Get user preferences
-  const { customTickers, coinmarketcapApiKey, dataSource } = getPreferenceValues<Preferences>();
+  const { customTickers, coinmarketcapApiKey, dataSource, priceChangeThreshold } = getPreferenceValues<Preferences>();
+  
+  // Parse the price change threshold (default to 5% if not provided or invalid)
+  const thresholdValue = parseFloat(priceChangeThreshold || "5");
   
   /**
    * Create the appropriate price fetcher based on user preference
@@ -238,8 +242,12 @@ ${crypto.name} is a cryptocurrency with the symbol ${crypto.symbol.replace(/USDT
         <List.Section>
           {filteredPrices.map((item) => {
             const priceChange1h = parseFloat(item.priceChangePercent1h || "0");
+            const priceChange24h = parseFloat(item.priceChangePercent24h || "0");
             const isPositive1h = priceChange1h >= 0;
             const baseAsset = item.symbol.replace(/USDT$/, "");
+            
+            // Check if price change exceeds threshold for fire emoji
+            const showFireEmoji = Math.abs(priceChange1h) >= thresholdValue || Math.abs(priceChange24h) >= thresholdValue;
             
             // Use the icon URL from CoinMarketCap if available, otherwise use a default icon
             const rowIcon = item.iconUrl 
@@ -252,7 +260,7 @@ ${crypto.name} is a cryptocurrency with the symbol ${crypto.symbol.replace(/USDT
                 id={item.symbol}
                 icon={rowIcon}
                 title={baseAsset}
-                subtitle={formatPrice(item.price)}
+                subtitle={showFireEmoji ? `${formatPrice(item.price)} 🔥` : formatPrice(item.price)}
                 accessories={[
                   { 
                     tag: {

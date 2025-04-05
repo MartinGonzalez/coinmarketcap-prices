@@ -45,6 +45,14 @@
               "value": "coinmarketcap"
             }
           ]
+        },
+        {
+          "name": "priceChangeThreshold",
+          "title": "Price Change Threshold (%)",
+          "description": "Add a fire emoji when price change exceeds this percentage",
+          "type": "textfield",
+          "required": false,
+          "default": "5"
         }
       ]
     }
