@@ -246,8 +246,10 @@ ${crypto.name} is a cryptocurrency with the symbol ${crypto.symbol.replace(/USDT
             const isPositive1h = priceChange1h >= 0;
             const baseAsset = item.symbol.replace(/USDT$/, "");
             
-            // Check if price change exceeds threshold for fire emoji
-            const showFireEmoji = Math.abs(priceChange1h) >= thresholdValue || Math.abs(priceChange24h) >= thresholdValue;
+            // Check if price changes exceed threshold for indicators
+            const show1hUpArrow = priceChange1h >= thresholdValue;
+            const show1hDownArrow = priceChange1h <= -thresholdValue;
+            const show24hFireEmoji = Math.abs(priceChange24h) >= thresholdValue;
             
             // Use the icon URL from CoinMarketCap if available, otherwise use a default icon
             const rowIcon = item.iconUrl 
@@ -260,7 +262,12 @@ ${crypto.name} is a cryptocurrency with the symbol ${crypto.symbol.replace(/USDT
                 id={item.symbol}
                 icon={rowIcon}
                 title={baseAsset}
-                subtitle={showFireEmoji ? `${formatPrice(item.price)} 🔥` : formatPrice(item.price)}
+                subtitle={
+                  show1hUpArrow ? `${formatPrice(item.price)} ⬆️` : 
+                  show1hDownArrow ? `${formatPrice(item.price)} ⬇️` : 
+                  show24hFireEmoji ? `${formatPrice(item.price)} 🔥` : 
+                  formatPrice(item.price)
+                }
                 accessories={[
                   { 
                     tag: {
