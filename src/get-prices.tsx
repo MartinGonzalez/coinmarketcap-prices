@@ -6,7 +6,7 @@ import { CryptoPrice } from "./domain/models";
 import { GetPricesCommand } from "./commands/get-prices-command";
 import { BinancePriceFetcher } from "./services/binance-price-fetcher";
 import { CoinMarketCapPriceFetcher } from "./services/coinmarketcap-price-fetcher";
-import { formatMarketCap } from "./utils/formatters";
+import { formatMarketCap, formatPrice, formatPercentageChange } from "./utils/formatters";
 import { debugIconCache } from "./utils/icon-cache";
 
 // Define preferences interface for Raycast
@@ -14,50 +14,11 @@ interface Preferences {
   customTickers: string;
   coinmarketcapApiKey?: string;
   dataSource: "binance" | "coinmarketcap";
-  priceChangeThreshold?: string;
+  priceChange1hThreshold?: string;
+  priceChange24hThreshold?: string;
 }
 
 /**
- * Format price for display
- * @param price The price value to format
- * @returns Formatted price string with $ prefix
- */
-function formatPrice(price: string): string {
-  return `$${price}`;
-}
-
-/**
- * Format percentage change with appropriate sign
- * @param change The percentage change value
- * @param isPositive Whether the change is positive
- * @returns Formatted percentage string with sign and % suffix
- */
-function formatPercentageChange(change: number, isPositive: boolean): string {
-  // Format with sign and fixed decimal places
-  const formattedValue = isPositive 
-    ? `+${change.toFixed(2)}%` 
-    : `${change.toFixed(2)}%`;
-  
-  // Pad to a fixed width of 10 characters
-  return padToFixedWidth(formattedValue, 10);
-}
-
-/**
- * Pad a string to a fixed width with spaces
- * @param value The string to pad
- * @param width The desired width
- * @returns Padded string with spaces on both sides
- */
-function padToFixedWidth(value: string, width: number): string {
-  if (value.length >= width) return value;
-  
-  const spacesToAdd = width - value.length;
-  const leftPad = Math.floor(spacesToAdd / 2);
-  const rightPad = spacesToAdd - leftPad;
-  
-  return ' '.repeat(leftPad) + value + ' '.repeat(rightPad);
-}
-
 /**
  * Get a consistent color for a cryptocurrency based on its ticker
  * @param ticker Cryptocurrency ticker symbol
@@ -85,10 +46,11 @@ export default function Command() {
   const [selectedCrypto, setSelectedCrypto] = useState<CryptoPrice | null>(null);
   
   // Get user preferences
-  const { customTickers, coinmarketcapApiKey, dataSource, priceChangeThreshold } = getPreferenceValues<Preferences>();
+  const { customTickers, coinmarketcapApiKey, dataSource, priceChange1hThreshold, priceChange24hThreshold } = getPreferenceValues<Preferences>();
   
-  // Parse the price change threshold (default to 5% if not provided or invalid)
-  const thresholdValue = parseFloat(priceChangeThreshold || "5");
+  // Parse the price change thresholds (provide defaults if not provided or invalid)
+  const threshold1hValue = parseFloat(priceChange1hThreshold || "5");
+  const threshold24hValue = parseFloat(priceChange24hThreshold || "10");
   
   /**
    * Create the appropriate price fetcher based on user preference
@@ -167,7 +129,6 @@ export default function Command() {
     
     // Set up auto-refresh every 30 seconds
     const intervalId = setInterval(() => {
-      console.log("[get-prices] Auto-refreshing prices...");
       loadPrices();
     }, 30000);
     
@@ -184,39 +145,7 @@ export default function Command() {
       setSelectedCrypto(filteredPrices[0]);
     }
   }, [filteredPrices, selectedCrypto]);
-  
-
-  
-  /**
-   * Render markdown content for the detail view
-   * @param crypto Cryptocurrency data to display
-   */
-  const renderDetailMarkdown = (crypto: CryptoPrice): string => {
-    const priceChange24h = parseFloat(crypto.priceChangePercent24h || "0");
-    const priceChange7d = parseFloat(crypto.priceChangePercent7d || "0");
-    const isPositive24h = priceChange24h >= 0;
-    const isPositive7d = priceChange7d >= 0;
     
-    return `
-# ${crypto.name} (${crypto.symbol})
-
-## Current Price
-**${formatPrice(crypto.price)}**
-
-## Performance
-- **24h Change**: ${isPositive24h ? '🟢' : '🔴'} ${formatPercentageChange(priceChange24h, isPositive24h)}
-- **7d Change**: ${isPositive7d ? '🟢' : '🔴'} ${formatPercentageChange(priceChange7d, isPositive7d)}
-
-## Market Data
-- **Market Cap**: ${formatMarketCap(crypto.marketCap || "0")}
-
-## About ${crypto.name}
-${crypto.name} is a cryptocurrency with the symbol ${crypto.symbol.replace(/USDT$/, "")}.
-    `;
-  };
-  
-
-  
   // Render the UI with a proper master-detail view
   return (
     <List
@@ -247,9 +176,19 @@ ${crypto.name} is a cryptocurrency with the symbol ${crypto.symbol.replace(/USDT
             const baseAsset = item.symbol.replace(/USDT$/, "");
             
             // Check if price changes exceed threshold for indicators
-            const show1hUpArrow = priceChange1h >= thresholdValue;
-            const show1hDownArrow = priceChange1h <= -thresholdValue;
-            const show24hFireEmoji = Math.abs(priceChange24h) >= thresholdValue;
+            const show1hUpArrow = priceChange1h >= threshold1hValue;
+            const show1hDownArrow = priceChange1h <= -threshold1hValue;
+            const show24hFireEmoji = Math.abs(priceChange24h) >= threshold24hValue;          
+            
+            // Determine which emoji to show (if any)
+            let priceIndicator = "";
+            if (show1hUpArrow) {
+              priceIndicator = " 🚀"; // Green up-right arrow
+            } else if (show1hDownArrow) {
+              priceIndicator = " 📉"; // Red down-right arrow
+            } else if (show24hFireEmoji) {
+              priceIndicator = " 🔥"; // Fire for 24h volatility
+            }
             
             // Use the icon URL from CoinMarketCap if available, otherwise use a default icon
             const rowIcon = item.iconUrl 
@@ -262,12 +201,7 @@ ${crypto.name} is a cryptocurrency with the symbol ${crypto.symbol.replace(/USDT
                 id={item.symbol}
                 icon={rowIcon}
                 title={baseAsset}
-                subtitle={
-                  show1hUpArrow ? `${formatPrice(item.price)} ⬆️` : 
-                  show1hDownArrow ? `${formatPrice(item.price)} ⬇️` : 
-                  show24hFireEmoji ? `${formatPrice(item.price)} 🔥` : 
-                  formatPrice(item.price)
-                }
+                subtitle={`${formatPrice(item.price)}${priceIndicator}`}
                 accessories={[
                   { 
                     tag: {

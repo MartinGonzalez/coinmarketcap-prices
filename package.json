@@ -47,12 +47,20 @@
           ]
         },
         {
-          "name": "priceChangeThreshold",
-          "title": "Price Change Threshold (%)",
-          "description": "Add a fire emoji when price change exceeds this percentage",
+          "name": "priceChange1hThreshold",
+          "title": "1h Price Change Threshold (%)",
+          "description": "Show an arrow when 1h price change exceeds this percentage",
           "type": "textfield",
           "required": false,
           "default": "5"
+        },
+        {
+          "name": "priceChange24hThreshold",
+          "title": "24h Price Change Threshold (%)",
+          "description": "Show a fire emoji when 24h price change exceeds this percentage",
+          "type": "textfield",
+          "required": false,
+          "default": "10"
         }
       ]
     }

@@ -3,6 +3,62 @@
  */
 
 /**
+ * Format price for display with adaptive decimal places based on price magnitude
+ * @param price The price value to format
+ * @returns Formatted price string with $ prefix and appropriate decimal places
+ */
+export function formatPrice(price: string): string {
+  // Parse the price to a number
+  const numericPrice = parseFloat(price);
+  
+  let formattedPrice: string;
+  
+  if (numericPrice >= 1) {
+    // For prices >= 1, show no decimals (e.g., $1500)
+    formattedPrice = numericPrice.toFixed(0);
+  } else if (numericPrice >= 0.1) {
+    // For prices between 0.1 and 1, show 3 decimals (e.g., $0.500)
+    formattedPrice = numericPrice.toFixed(3);
+  } else {
+    // For all prices < 0.1, show 5 decimals (e.g., $0.05382)
+    formattedPrice = numericPrice.toFixed(5);
+  }
+  
+  return `$${formattedPrice}`;
+}
+
+/**
+ * Format percentage change with appropriate sign
+ * @param change The percentage change value
+ * @param isPositive Whether the change is positive
+ * @returns Formatted percentage string with sign and % suffix
+ */
+export function formatPercentageChange(change: number, isPositive: boolean): string {
+  // Format with sign and fixed decimal places
+  const formattedValue = isPositive 
+    ? `+${change.toFixed(2)}%` 
+    : `${change.toFixed(2)}%`;
+  
+  // Pad to a fixed width of 10 characters
+  return padToFixedWidth(formattedValue, 10);
+}
+
+/**
+ * Pad a string to a fixed width with spaces
+ * @param value The string to pad
+ * @param width The desired width
+ * @returns Padded string with spaces on both sides
+ */
+function padToFixedWidth(value: string, width: number): string {
+  if (value.length >= width) {
+    return value;
+  }
+  
+  const padding = ' '.repeat(width - value.length);
+  return `${value}${padding}`;
+}
+
+/**
  * Format market cap value with appropriate suffix (B/M/K)
  * @param marketCap Market cap value as string
  * @returns Formatted market cap string
